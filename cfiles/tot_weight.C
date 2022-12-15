@@ -1,7 +1,7 @@
 void tot_weight()
 {
 //=========Macro generated from canvas: tot_weight_canvas/tot_weight
-//=========  (Fri Nov 18 12:55:27 2022) by ROOT version 6.12/07
+//=========  (Thu Dec 15 18:17:33 2022) by ROOT version 6.12/07
    TCanvas *tot_weight_canvas = new TCanvas("tot_weight_canvas", "tot_weight",0,0,600,750);
    gStyle->SetOptFit(1);
    gStyle->SetOptStat(0);
