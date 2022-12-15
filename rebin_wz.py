@@ -9,10 +9,13 @@ import sys
 
 r.gROOT.SetBatch(1)
 
-functional_variables = {"m3l"     : "m3Lmet"}
+functional_variables = {"m3l"     : "m3Lmet",
+						"met"	  : "MET_pt_central",
+						"m3L"	  : "m3L"}
 
 def histo_deepcopy(h):
-	''' This function avoids any memory problem regarding histogram creation '''  
+	''' This function avoids any memory problem regarding histogram creation '''
+	print(type(h))
 	h.SetDirectory(0)
 	histo = deepcopy(h.Clone())
 	return histo
@@ -21,6 +24,7 @@ def get_histos(var, filename, someProcess = ""):
 	''' Read histograms from the root file and save them into a dictionary '''
 	histos = {}
 	f = r.TFile.Open(filename)
+	f.ls()
 	
 	if someProcess != "":
 		histo = histo_deepcopy(f.Get(var + "_" + someProcess))
@@ -65,7 +69,7 @@ def add_parsing_options():
 	parser.add_argument("--mode",      dest = "mode")
 	parser.add_argument("--year",      dest = "year", default = "2022")
 	parser.add_argument("--ncores",	   dest = "ncores",default = 8)
-	parser.add_argument("--lumis",	   dest = "lumis",default = {"2022":13.09})
+	parser.add_argument("--lumis",	   dest = "lumis",default = {"2022":"13.09"})
 	parser.add_argument("--cut",	   dest = "cut",default = "./wz-run3/common/cuts_wzsm.txt")
 	parser.add_argument("--run-local", dest = "local",action = "store_true",default = False)
 	parser.add_argument("--extra",	   dest = "extra",default = "",type = str,
@@ -92,15 +96,13 @@ def make_plotfile(filename, line):
 
 def make_plots(options):
 	'''
+	This function takes user's options and launches a batch command with
+	the necessary info to generate a plot of the selected variable and
+	desired binning.
 	
-	'''
-	''' This is where the magic hapens :) '''
-	'''
-	  * Edit this function as you please (add parameters, options, whatever) 
-	  * The ultimate goal for this function is to produce plots of variables that have a certain binning
-	'''
-	'''
-	This function takes account of parser options, at the moment 10 options have been added:
+	Parameters
+	----------
+	options : tuple containing 11 elements:
 		1. Output path
 		2. Number of cores
 		3. Luminosity (in 1/pb)
@@ -112,7 +114,13 @@ def make_plots(options):
 		9. Extra options (like sP)
 		10. Submit command directly (maintain this as the second to last)
 		11. Run local (maintain this as the last one)
+		
+	Returns
+	-------
+	cmd : batch command as a string containing all the options passed by
+		  the user.
 	'''
+	
 	comm = "python wz-run3/wz-run.py plot" # Raw command, let's add some options
 	
 	if "" not in options[8]: # Fixing syntax to pass the command to wz-run.py
@@ -125,7 +133,8 @@ def make_plots(options):
 		
 	# Now we add other options like run local, do submit, number of cores, etc
 	comm += " --outname " + options[0] + " --ncores " + options[1] + (" --run-local ")*int(options[-1]) +\
-			"--extra " + extra_opt + (" --do-submit ")*int(options[-2]) + " --plotfile %s"%(options[4])
+			"--extra " + extra_opt + (" --do-submit ")*int(options[-2]) + " --plotfile %s"%(options[4]) +\
+			" --cutfile %s"%(options[7])
 	
 	f = os.popen(comm) # os.popen run comm string as a bash command
 	cmd = f.read()
