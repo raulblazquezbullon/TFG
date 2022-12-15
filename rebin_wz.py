@@ -9,13 +9,12 @@ import sys
 
 r.gROOT.SetBatch(1)
 
-functional_variables = {"m3l"     : "m3Lmet",
-						"met"	  : "MET_pt_central",
-						"m3L"	  : "m3L"}
+functional_variables = {"m3l" : "m3L",
+						"met" : "MET_pt_central",
+						"m3lmet_Meas" : "m3Lmet"}
 
 def histo_deepcopy(h):
 	''' This function avoids any memory problem regarding histogram creation '''
-	print(type(h))
 	h.SetDirectory(0)
 	histo = deepcopy(h.Clone())
 	return histo
@@ -24,7 +23,6 @@ def get_histos(var, filename, someProcess = ""):
 	''' Read histograms from the root file and save them into a dictionary '''
 	histos = {}
 	f = r.TFile.Open(filename)
-	f.ls()
 	
 	if someProcess != "":
 		histo = histo_deepcopy(f.Get(var + "_" + someProcess))
