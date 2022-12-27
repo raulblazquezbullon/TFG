@@ -130,58 +130,108 @@ def make_plots(options):
 		extra_opt = "'--sP %s_rebin%d"%(options[5],options[6]) + "'"
 		
 	# Now we add other options like run local, do submit, number of cores, etc
-	comm += " --outname " + options[0] + " --ncores " + options[1] + (" --run-local ")*int(options[-1]) +\
-			"--extra " + extra_opt + (" --do-submit ")*int(options[-2]) + " --plotfile %s"%(options[4]) +\
+	comm += " --outname " + options[0] + " --ncores " + options[1] + (" --run-local")*int(options[-1]) +\
+			" --extra " + extra_opt + (" --do-submit")*int(options[-2]) + " --plotfile %s"%(options[4]) +\
 			" --cutfile %s"%(options[7])
 	
-	f = os.popen(comm) # os.popen run comm string as a bash command
+	f = os.popen(comm) # os.popen runs comm string as a bash command
+	cmd = f.read()
+	return cmd
+	
+def make_cards(options):
+	'''
+	This function takes user's options and launches a batch command with
+	the necessary info to produce a card of the selected variable and
+	desired binning.
+	
+	Parameters
+	----------
+	options : tuple containing 11 elements:
+		1. Output path
+		2. Number of cores
+		3. Luminosity (in 1/pb)
+		4. Year
+		5. Name of the file
+		6. Variable to be studied
+		7. Number of quantiles
+		8. Cut file
+		9. Extra options (for makeShapeCards_wzRun3.py)
+		10. Rebinned quantiles
+		11. Variable command name name of the variable in plots_wz.txt)
+		12. Submit command directly (maintain this as the second to last)
+		13. Run local (maintain this as the last one)
+		
+	Returns
+	-------
+	cmd : batch command as a string containing all the options passed by
+		  the user.
+	'''
+	comm = "python wz-run3/wz-run.py card" # Raw command, let's add some options
+	
+	if "" not in options[8]: # Fixing syntax to pass the command to wz-run.py
+		extra_opt = " --".join(options[8])
+		extra_opt = "".join(["'--",extra_opt,"'"])
+		
+	else: extra_opt = "".join(options[8]) # If extra is not provided, it is taken as an empty string in a list
+	
+	new_bin = [str(bins) for bins in options[9]]
+	new_bin = ",".join(new_bin)
+		
+	# Now we add other options like run local, do submit, number of cores, etc
+	comm += " --outname " + options[0] + " --ncores " + options[1] + (" --run-local")*int(options[-1]) +\
+			(" --extra " + extra_opt)*(len(extra_opt) != 0) + (" --do-submit")*int(options[-2]) +\
+			" --binning %s"%(new_bin) +	" --cutfile %s"%(options[7]) + " --var %s"%(options[10])
+	
+	f = os.popen(comm) # os.popen runs comm string as a bash command
 	cmd = f.read()
 	return cmd
 
 if __name__ == "__main__":
-   # == Load options
-   opts = add_parsing_options()
-   
-   # print(functional_variables.keys())
-   
-   nquant    = opts.nquant.split(",")
-   variables = opts.variables.split(",") # This line raise an error if user don't give variables manually
-   mode      = opts.mode
-   year      = opts.year
-   cores 	 = opts.ncores
-   lumis 	 = opts.lumis
-   cut 		 = opts.cut
-   local 	 = opts.local
-   submit 	 = opts.submit
-   extra 	 = opts.extra.split(",")
-   
-   # == Rootfile with unrebinned plots
-   inpath = "./output_raul/plots_wz.root"
-   outpath = "./check_discriminant_vars/"
-   mode = "plot"
-   
-   # == Iterate over variables
-   for var in variables:
-     print("=======")
-     print("{}".format(var))
+	# == Load options
+	opts = add_parsing_options()
+	nquant    = opts.nquant.split(",")
+	variables = opts.variables.split(",") # This line raise an error if user don't give variables manually
+	mode      = opts.mode
+	year      = opts.year
+	cores 	  = opts.ncores
+	lumis 	  = opts.lumis
+	cut 	  = opts.cut
+	local 	  = opts.local
+	submit 	  = opts.submit
+	extra 	  = opts.extra.split(",")
 
-     # == Get the required variable defined within CMGTools
-     var_to_comm = functional_variables[var]
-     
-     for nq in nquant:
-       out = outpath + "./rebin%s/%s"%(nq, var)
-       nq = int(nq)
-       # == Get the new binning for the histogram
-       rebining = rebin_histo(var, inpath, nq)
-       if mode == "plot":
-          
-          # == Create an specific plot file with the desired rebinning
-          filename = "./wz-run3/separate-studies/bining_optimization/{var}_{nq}_plots.txt".format(var = var, nq = nq)
-          line = "%s_rebin%d:%s:%s;XTitle='%s', MoreY=2.0\n"%(var, nq, var_to_comm, rebining, var)
+	# == Rootfile with unrebinned plots
+	inpath = "./output_raul/plots_wz.root"
+	outpath = "./check_discriminant_vars/"
 
-          if not os.path.isfile(filename): make_plotfile(filename, line)
+	# == Iterate over variables
+	for var in variables:
+		print("=======")
+		print("{}".format(var))
 
-          pars = (out, cores, lumis[year], year, filename, var, nq, cut, extra, submit, local)
-          batchcomm = make_plots(pars)
-          print(batchcomm)
-          
+		# == Get the required variable defined within CMGTools
+		var_to_comm = functional_variables[var]
+
+		for nq in nquant:
+			out = outpath + "./rebin%s/%s"%(nq, var)
+			nq = int(nq)
+			# == Get the new binning for the histogram
+			rebining = rebin_histo(var, inpath, nq)
+			if mode == "plot":
+
+				# == Create an specific plot file with the desired rebinning
+				filename = "./wz-run3/separate-studies/bining_optimization/{var}_{nq}_plots.txt".format(var = var, nq = nq)
+				line = "%s_rebin%d:%s:%s;XTitle='%s', MoreY=2.0\n"%(var, nq, var_to_comm, rebining, var)
+
+				if not os.path.isfile(filename): make_plotfile(filename, line)
+
+				pars = (out, cores, lumis[year], year, filename, var, nq, cut, extra, submit, local)
+				batchcomm = make_plots(pars)
+				print(batchcomm)
+				
+			elif mode == "card":
+				filename = "./wz-run3/separate-studies/bining_optimization/{var}_{nq}_plots.txt".format(var = var, nq = nq)
+				
+				pars = (out, cores, lumis[year], year, filename, var, nq, cut, extra, rebining, var_to_comm, submit, local)
+				batchcomm = make_cards(pars)
+				print(batchcomm)
